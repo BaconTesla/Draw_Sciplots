@@ -1,0 +1,152 @@
+---
+title: "ggplot2-deviation"
+output: html_notebook
+---
+
+Compare variation in values between small number of items (or categories) with respect to a fixed reference.
+比较数据之间偏差
+
+# 1.发散条形图Diverging bars
+```{r}
+library(ggplot2)
+theme_set(theme_bw())
+
+data('mtcars')
+mtcars$car_name <- rownames(mtcars)
+mtcars$mpg_z <- round((mtcars$mpg - mean(mtcars$mpg))/sd(mtcars$mpg), 2)
+
+mtcars$mpg_type <- ifelse(mtcars$mpg_z < 0, 'below', 'above')
+mtcars <- mtcars[order(mtcars$mpg_z), ]
+mtcars$car_name <- factor(mtcars$car_name, levels = mtcars$car_name) #转换为因子，可以确保顺序不变
+
+ggplot(mtcars, aes(x=car_name, y=mpg_z, label=mpg_z)) +
+  geom_bar(stat = 'identity', aes(fill=mpg_type), width = 0.5) + # stat设置为identity表示直接使用原数据，不经过任何统计学变换
+  scale_fill_manual(name='Mileage', # 自定义填充颜色，设置图例名称
+                    labels = c('Above Average', 'Below Average'), # 设置图例标签
+                    values = c('above'='#00ba38', 'below'='#f8766d')) + # 设置颜色映射
+  labs(subtitle = 'Normalized mileage from mtcars',
+       title = 'Diverging Bars') +
+  coord_flip() # 翻转坐标轴
+```
+如果不设置为因子，则在绘图的时候，会按照car_name的ASCII进行排序
+在单细胞聚类的过程中，往往就需要将聚得的类转换为因子以保持顺序，不然图例会出现c1,c10,c11,c12,c2,c3,c4,c5,c6,c7,c8,c9的排序现象
+```{r}
+library(ggplot2)
+theme_set(theme_bw())
+
+data('mtcars')
+mtcars$car_name <- rownames(mtcars)
+mtcars$mpg_z <- round((mtcars$mpg - mean(mtcars$mpg))/sd(mtcars$mpg), 2)
+
+mtcars$mpg_type <- ifelse(mtcars$mpg_z < 0, 'below', 'above')
+mtcars <- mtcars[order(mtcars$mpg_z), ]
+# mtcars$car_name <- factor(mtcars$car_name, levels = mtcars$car_name) #转换为因子，可以确保顺序不变
+
+ggplot(mtcars, aes(x=car_name, y=mpg_z, label=mpg_z)) +
+  geom_bar(stat = 'identity', aes(fill=mpg_type), width = 0.5) +
+  scale_fill_manual(name='Mileage',
+                    labels = c('Above Average', 'Below Average'),
+                    values = c('above'='#00ba38', 'below'='#f8766d')) +
+  labs(subtitle = 'Normalized mileage from mtcars',
+       title = 'Diverging Bars') +
+  coord_flip()
+```
+
+# 2. 棒棒糖图 Diverging Lollipop Chart
+这里使用geom_point和geom_segment来模拟棒棒糖
+很巧妙，现绘制一个点图图层，然后在加上一个线段图层，线段的长度由对应的y值决定。这样就模拟出一个棒棒糖图形
+```{r}
+library(ggplot2)
+theme_set(theme_bw())
+
+data('mtcars')
+mtcars$car_name <- rownames(mtcars)
+mtcars$mpg_z <- round((mtcars$mpg - mean(mtcars$mpg))/sd(mtcars$mpg), 2)
+
+mtcars$mpg_type <- ifelse(mtcars$mpg_z < 0, 'below', 'above')
+mtcars <- mtcars[order(mtcars$mpg_z), ]
+mtcars$car_name <- factor(mtcars$car_name, levels = mtcars$car_name) #转换为因子，可以确保顺序不变
+
+ggplot(mtcars, aes(x=car_name, y=mpg_z, label=mpg_z)) +
+  geom_point(stat = 'identity', fill='black',size=6) +
+  geom_segment(aes(y=0,
+                   x=car_name,
+                   yend=mpg_z,
+                   xend=car_name),
+               color='black') +
+  geom_text(color='white', size=2) +
+  labs(title='Diverging Lollipop Chart',
+       subtitle='Normalized mileage from mtcars: Lollipop') +
+  ylim(-2.5, 2.5) +
+  coord_flip()
+
+```
+
+# 3.点图
+这里使用到了scale_color_manual，相比与之前的scale_fill_manual，虽然都是用于设置颜色的，但稍有不同
+scale_color_manual：
+
+这个函数用于手动设置图形中颜色的比例尺（scale）。
+它通常与映射到aes()中的color美学属性一起使用。
+scale_color_manual允许你为离散变量的每个水平（level）指定一个颜色。
+它常用于为条形图、点图、线图等的元素（如点、线）指定颜色。
+scale_fill_manual：
+
+这个函数用于手动设置图形中填充颜色的比例尺。
+它通常与映射到aes()中的fill美学属性一起使用。
+scale_fill_manual允许你为填充元素（如条形图、区域图、多边形等）的离散变量的每个水平指定一个颜色。
+它常用于为条形图、区域图、热图等的填充部分指定颜色。
+使用场景：
+当你需要为图形中的元素（如线条、点）指定颜色时，使用scale_color_manual()。
+当你需要为图形中的填充区域（如条形图的条形、热图中的单元格）指定颜色时，使用scale_fill_manual()。
+```{r}
+library(ggplot2)
+theme_set(theme_bw())
+
+data('mtcars')
+mtcars$car_name <- rownames(mtcars)
+mtcars$mpg_z <- round((mtcars$mpg - mean(mtcars$mpg))/sd(mtcars$mpg), 2)
+
+mtcars$mpg_type <- ifelse(mtcars$mpg_z < 0, 'below', 'above')
+mtcars <- mtcars[order(mtcars$mpg_z), ]
+mtcars$car_name <- factor(mtcars$car_name, levels = mtcars$car_name) #转换为因子，可以确保顺序不变
+
+
+ggplot(data = mtcars, aes(x=car_name, y=mpg_z, label=mpg_z)) +
+  geom_point(stat = 'identity', aes(col=mpg_type), size=6) +
+  geom_text(color='white', size=2) +
+  scale_color_manual(name='Mileage',
+                     labels=c('Above average', 'Below Average'),
+                     values=c('above'='#00ba38','below'='#f8766d'))+
+  labs(title='Diverging Lollipop Chart',
+       subtitle='Normalized mileage from mtcars: Lollipop') +
+  ylim(-2.5, 2.5) +
+  coord_flip()
+```
+
+# 4. 区域图 Area Chart
+```{r}
+library(ggplot2)
+library(quantmod)
+data('economics', package = 'ggplot2')
+
+economics$return_perc <- c(0, diff(economics$psavert)/economics$psavert[-length(economics$psavert)])
+
+brks <- economics$date[seq(1, length(economics$date), 12)] # 获取每隔12个月的日期
+lbls <- lubridate::year(economics$date[seq(1, length(economics$date), 12)]) # 获取断点中的年份信息，这个包的year函数专门用于获取特定格式下的年份
+
+ggplot(economics[1:100, ], aes(date, return_perc)) +
+  geom_area() +
+  scale_x_date(breaks = brks, labels = lbls) + # 设置x轴的比例尺，使用brks作为断点，lbls作为标签。
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5 )) + # 设置x轴文本的角度为90度，使标签垂直显示。
+  labs(title = "Area Chart",
+       subtitle = "Perc Return for Personal Savings",
+       y="% Returns for Perconal savings",
+       caption = "Source: ecnomoics")
+```
+
+
+
+
+
+

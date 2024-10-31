@@ -1,0 +1,237 @@
+---
+title: "ggplot2-correlation"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+```
+
+
+# 1.散点图
+## 1.1 基础散点图
+数据分析中最常用的图无疑是散点图。每当你想了解两个变量之间的关系性质时，散点图总是首选。
+
+可以使用 geom_point() 绘制。
+此外，默认情况下，geom_smooth 会绘制一条平滑线（基于 loess），可以通过设置 method='lm' 进行调整以绘制最佳拟合线。
+```{r}
+options(scipen = 999)
+theme_set(theme_bw()) # 预先设置绘图主题
+data("midwest", package = "ggplot2")
+```
+
+```{r}
+midwest
+```
+
+
+```{r}
+gg <- ggplot(midwest, aes(x=area, y=poptotal)) + # 初始化一个ggplot对象，并指向数据集midwest，aes()函数用于映射数据的列到图形的美学属性，这里将area列映射到x轴，poptotal列映射到y轴。
+  geom_point(aes(col=state, size=popdensity)) + # 添加一个散点图层，用state表示点的颜色，popdensity表示点的大小
+  geom_smooth(method = 'loess', se=F) + # 添加一个平滑曲线图层，使用LOESS局部加权回归进行拟合，se表示是否显示平滑曲线的置信区间
+  xlim(c(0,0.1)) + # 限制x坐标的范围
+  ylim(c(0,500000)) + # 限制y坐标的范围，注意，限制x和y的范围，并不影响拟合时使用全部的数据。
+  labs(subtitle = "Area Vs Population", # labs()为图形添加标签，subtitle设置子标题
+       y="Population", # 设置y轴的标题
+       x="Area", # 设置x轴的标题
+       title = "ScatterPlot", # 设置图形的主标题
+       caption = "Source:midwest") # 设置图形的来源信息，通常作为附加信息展示
+
+plot(gg)
+```
+
+```{r}
+gg <- ggplot(midwest, aes(x=area, y=poptotal)) +
+  geom_point(aes(col=state, size=popdensity)) +
+  geom_smooth(method = 'loess', se=T) +
+  xlim(c(0,0.1)) +
+  ylim(c(0,500000)) +
+  labs(subtitle = "Area Vs Population",
+       y="Population",
+       x="Area",
+       title = "ScatterPlot",
+       caption = "Source:midwest")
+
+plot(gg)
+```
+
+```{r}
+gg <- ggplot(midwest, aes(x=area, y=poptotal)) +
+  geom_point(aes(col=state, size=popdensity)) +
+  geom_smooth(method = 'lm', se=F) + # 这里使用lm 使用线性模型拟合，得到的是一条直线
+  xlim(c(0,0.1)) +
+  ylim(c(0,500000)) +
+  labs(subtitle = "Area Vs Population",
+       y="Population",
+       x="Area",
+       title = "ScatterPlot",
+       caption = "Source:midwest")
+
+plot(gg)
+```
+
+## 1.2绘制有内置圆圈的散点图Scatterplot With Encircling
+在展示结果时，有时我会在图表中圈出某些特殊的点组或区域，以引起人们对这些特殊情况的注意。
+这可以方便地使用 ggalt 包中的 geom_encircle() 来完成。
+
+在 geom_encircle() 中，将数据设置为仅包含点（行）或感兴趣的新数据框。
+此外，您可以扩展曲线，使其刚好超出点的范围。曲线的颜色和大小（厚度）也可以修改。
+```{r}
+options(scipen = 999)
+library(ggplot2)
+library(ggalt)
+midwest_select <- midwest[midwest$poptotal > 350000 &
+                            midwest$poptotal <= 500000 &
+                            midwest$area > 0.01 &
+                            midwest$area < 0.1,]
+```
+
+```{r}
+gg <- ggplot(midwest, aes(x=area, y=poptotal)) +
+        geom_point(aes(col=state, size=popdensity)) +
+        geom_smooth(method = 'loess', se=F) +
+        xlim(c(0,0.1)) +
+        ylim(c(0,500000)) +
+        geom_encircle(data=midwest_select, # 指向被选择的数据，aes美学映射
+                      aes(x=area, y=poptotal), 
+                      color='red', 
+                      size=2, # 圆圈线的粗细
+                      expand=0.08) + # 设置圆圈在原数据的基础上向外扩展的程度，设置大了，会圈入别的数据，为0则是圆圈刚好经过数据点
+        labs(subtitle = "Area Vs Population",
+             y="Population",
+             x="Area",
+             title = "ScatterPlot +Encircle",
+             caption = "Source:midwest")
+plot(gg)
+```
+
+## 1.3 抖动散点图Jitter plot
+适用于存在许多重叠的散点图
+```{r}
+library(ggplot2)
+data(mpg,package = "ggplot2")
+theme_set(theme_bw())
+
+# 下面是一种新写法，ggplot绘图本质上就是图层的叠加，当然既可以拆开来写也可以合并来写
+g <- ggplot(mpg, aes(cty, hwy))
+
+g + geom_point() + # 这里不像前面指定了aes，因此默认使用原始的美学映射，但是必须加上geom_point才能绘制出图形，不然只有一个画图
+  geom_smooth(method='lm', se=F) +
+  labs(subtitle = "mpg:city vs highway mileage",
+       y="hwy",
+       x="cty",
+       title = "Scatterplot with overlapping points",
+       caption = "Source: midwest")
+```
+```{r}
+g <- ggplot(mpg, aes(cty, hwy))
+
+g + geom_jitter(width = 0.5, size=1) + 
+  # geom_smooth(method='lm', se=F) +
+  labs(subtitle = "mpg:city vs highway mileage",
+       y="hwy",
+       x="cty",
+       title = "jitterplot with overlapping points",
+       caption = "Source: midwest")
+```
+
+# 计数图Counts Chart
+另外一种克服数据点重叠
+```{r}
+library(ggplot2)
+data(mpg, package='ggplot2')
+
+theme_set(theme_bw())
+g <- ggplot(mpg, aes(cty, hwy))
+g + geom_count(col='tomato3', show.legend = F) +
+  labs(subtitle = 'mpg: city vs highway mileage',
+       y = 'hwy',
+       x = 'cty',
+       title = 'Counts Plot')
+```
+
+# 1.3 气泡图 bubble plot
+当需要展示的数据信息多于2维时，可以考虑使用bubble plot
+```{r}
+library(ggplot2)
+data(mpg, package = "ggplot2")
+
+mpg_select <- mpg[mpg$manufacturer %in% c('audi','ford','honda','hyundai'), ]
+
+theme_set(theme_wb())
+
+g <- ggplot(data = mpg_select, aes(x=displ, y=cty)) +
+  labs(subtitle='mpg: Displacement vs City Mileage',
+       title='Bubble chart')
+
+g + geom_jitter(aes(col=manufacturer, size=hwy)) +
+  geom_smooth(aes(col=manufacturer), method = 'lm', se=F) # 这里对平滑曲线设置了美学映射，因此会根据manufacturer分别绘制回归线
+```
+
+# 1.4 动态气泡图
+`devtools::install_github("dgrtwo/gganimate")`
+`install.packages('gapmibder')`
+```{r}
+library(ggplot2)
+library(gganimate)
+library(gapminder)
+theme_set(theme_bw())
+
+g <- ggplot(gapminder, aes(gdpPercap, lifeExp, size = pop, frame = year)) + 
+  geom_point() +
+  geom_smooth(aes(group = year),
+              method = 'lm',
+              show.legend = F) +
+  facet_wrap(~continent, scales='free') +
+  scale_x_log10() +
+  transition_time(year)
+```
+
+
+# 1.5 Margin Histgram / Boxplot
+为散点图附加直方图和箱线图，这里使用了ggExtra函数
+```{r}
+library(ggplot2)
+library(ggExtra)
+data(mpg, package = 'ggplot2')
+
+theme_set(theme_bw())
+mpg_select <- mpg[mpg$hwy >= 35 & mpg$cty > 27, ]
+g <- ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_count() +
+  geom_smooth(method = 'lm', se=F)
+
+ggMarginal(g, type = 'histogram', fill='transparent')
+ggMarginal(g, type = 'boxplot', fill='transparent')
+ggMarginal(g, type = 'violin', fill='transparent')
+```
+
+
+# 1.6 相关性图correlogram
+```{r}
+# devtools::install_github("kassambara/ggcorrplot")
+library(ggplot2)
+library(ggcorrplot)
+
+data(mtcars)
+corr <- round(cor(mtcars), 1) # round函数用于四舍五入数据到小数点后几位，如这里是小数点后1位
+
+ggcorrplot(corr, hc.order = TRUE, # 是否对相似性矩阵进行层次聚类
+           type = 'lower', # full，lower，upper，分别表示使用全矩阵，下三角和上三角
+           lab = TRUE, # 是否在图上的点加上相关性系数-标签
+           lab_size = 3, # 大小
+           method = 'circle', # 可选 square和circle，矩形还是圆形
+           colors = c('tomato2', 'white', 'springgreen3'), # 颜色映射
+           title = 'Correlogram of mtcars',
+           ggtheme = theme_bw) # 使用ggplot2的主题设置
+```
+```{r}
+ggcorrplot(corr,
+           type = 'full',
+           lab = F,
+           lab_size = 3,
+           method = 'square',
+           colors = c('tomato2', 'white', 'springgreen3'),
+           title = 'Correlogram of mtcars',
+           ggtheme = theme_bw)
+```

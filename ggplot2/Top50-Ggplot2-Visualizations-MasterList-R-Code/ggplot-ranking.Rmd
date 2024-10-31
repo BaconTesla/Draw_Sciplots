@@ -1,0 +1,177 @@
+---
+title: "ggplot2-ranking"
+output: html_notebook
+---
+
+# 1.排序条形图 ordered bar plot
+一般就是先排序，然后将横坐标转换为因子，才能够保证图形也是按照排序后的顺序绘制的
+```{r}
+library(ggplot2)
+data('mpg', package = 'ggplot2')
+cty_mpg <- aggregate(mpg$cty, by=list(mpg$manufacturer), FUN=mean)
+colnames(cty_mpg) <- c('make', 'mileage')
+cty_mpg <- cty_mpg[order(cty_mpg$mileage),]
+cty_mpg$make <- factor(cty_mpg$make, levels=cty_mpg$make)
+head(cty_mpg, 4)
+```
+
+```{r}
+library(ggplot2)
+theme_set(theme_bw())
+
+ggplot(cty_mpg, aes(x=make, y=mileage)) +
+  geom_bar(stat='identity', width = 0.5, fill='tomato3') +
+  labs(title = 'Ordered Bar Chart',
+       subtitle = 'Make Vs Avg Mileage',
+       caption = 'source: mpg') +
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+```
+
+#棒棒糖图 Lollipop chart
+与条形图提供相同的信息，但是表现形式更加现代化，并且能够强调价值，减少条形图中出现的混乱展示
+```{r}
+ggplot(data = cty_mpg, aes(x = make, y = mileage)) +
+  geom_point(stat = 'identity', aes(size= mileage), fill = 'black') +
+  geom_segment(aes(x = make,
+                   y = 0,
+                   xend = make,
+                   yend = mileage)) +
+  labs(title = "Lollipop Chart",
+       subtitle = "Make Vs Avg Mileage",
+       caption = "source: mpg") +
+  theme(axis.text.x = element_text(angle=45, vjust = 1, hjust = 1))
+```
+
+# 3. 点图 dotplot
+```{r}
+library(ggplot2)
+library(scales)
+theme_set(theme_bw())
+
+ggplot(cty_mpg, aes(make, mileage)) +
+  geom_segment(aes(x = make, xend = make,
+               y = min(mileage), yend = max(mileage)),
+               linetype = 'dashed',
+               linewidth = 0.5,
+               color = 'grey') +
+  geom_point(col = 'tomato3', size = 3) +
+  labs(title = "Dot plot",
+       subtitle = "Make Vs Avg Mileage",
+       caption = "source: mpg") +
+  coord_flip()
+```
+
+# 4. 斜坡图 Slope chart
+按时间比较2个点之间的位置分布
+```{r}
+library(ggplot2)
+library(scales)
+theme_set(theme_bw())
+
+df <- read.csv("https://raw.githubusercontent.com/selva86/datasets/master/gdppercap.csv")
+colnames(df) <- c("continent", "1952", "1957")
+left_label <- paste(df$continent, round(df$`1952`), sep = '')
+right_label <- paste(df$continent, round(df$`1957`), sep = '')
+df$class <- ifelse((df$`1957` - df$`1952`) < 0, 'red', 'green')
+
+p <- ggplot(df) +
+  geom_segment(aes(x = 1, xend = 2,
+                   y = `1952`, yend = `1957`,
+                   col = class), 
+               linewidth = 0.75,
+               show.legend = F) +
+  geom_vline(xintercept = 1, linetype = 'dashed', size = 0.5) +
+  geom_vline(xintercept = 2, linetype = 'dashed', size = 0.5) +
+  scale_color_manual(labels = c('up', 'down'),
+                     values = c('green' = '#00ba38', 'red' = '#f8766d')) +
+  labs(x = '', y = 'Mean GdpPerCap') +
+  xlim(0.5, 2.5) + 
+  ylim(0, 1.1*(max(df$`1952`, max(df$`1957`))))
+
+p <- p + geom_text(label = left_label, y = df$`1952`, x = rep(1, nrow(df)), hjust = 1.1, size = 3.5)
+p <- p + geom_text(label = right_label, y = df$`1957`, x = rep(2, nrow(df)), hjust = -0.1, size = 3.5)
+p <- p + geom_text(label = 'Time 1', x = 1, y = 1.1*(max(df$`1952`, df$`1957`)), hjust = 1.2, size = 5)
+p <- p + geom_text(label = 'Time 2', x = 2, y = 1.1*(max(df$`1952`, df$`1957`)), hjust = -0.2, size = 5)
+
+p + theme(panel.background =  element_blank(),
+          panel.grid = element_blank(),
+          axis.line = element_line(linewidth = .5),
+          axis.ticks = element_blank(),
+          axis.text.x = element_blank(),
+          panel.border = element_blank(),
+          plot.margin = unit(c(1,2,1,2), 'cm'))
+```
+
+
+# 哑铃图
+可以可视化两点之间的相对位置，从起点到终点
+```{r}
+library(ggplot2)
+library(ggalt)
+theme_set(theme_classic())
+
+health <- read.csv('https://raw.githubusercontent.com/selva86/datasets/master/health.csv')
+health$Area <- factor(health$Area, levels = as.character(health$Area))
+
+gg <- ggplot(health, aes(x = pct_2013, xend = pct_2014, y = Area, group = Area)) +
+  geom_dumbbell(colour_x = '#0e668b', # 添加一个哑铃图图层，设置起始点的颜色
+                colour_xend = '#a3c4dc', # 设置终止点的颜色
+                colour = '#a3c4dc', # 设置中间线段的颜色
+                size = 0.75) + # 设置点的大小
+  scale_x_continuous(label = percent) + # 设置x轴标签的，格式化为百分比
+  labs(x=NULL, # 不添加x轴名称
+       y=NULL, # 不添加y轴名称
+       title='Dumbbel Chart', # 设置标题
+       subtitle='Pct Change: 2013 vs 2014', # 设置子标题
+       caption='Source: https://github.com/hrbrmstr/ggalt') + #设置备注
+  theme(plot.title = element_text(hjust=0.5, face = 'bold'), # 设置标题的主题样式，水平居中，字体加粗
+        plot.background = element_rect(fill = '#f7f7f7'), # 设置图标背景的填充颜色
+        panel.background = element_rect(fill='#f7f7f7'), # 设置图标画板的背景填充颜色
+        panel.grid.minor = element_blank(), # 移除图表中次要的网格线
+        panel.grid.major.y = element_blank(), # 移除y轴的主要网格线
+        panel.grid.major.x = element_line(), # 设置x轴的主要网格线
+        axis.ticks = element_blank(), # 移除坐标轴刻度
+        legend.position = 'top', # 设置图例的位置为顶部
+        panel.border = element_blank()) # 移除图标的边框
+plot(gg)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
